@@ -7,22 +7,22 @@ on:
 
 jobs:
   build:
-    runs-on: macos-13
+    runs-on: macos-latest
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Arch check
-        run: uname -m && xcodebuild -version && sw_vers
+        run: uname -m && xcrun --sdk iphoneos --show-sdk-path && sw_vers
 
-      - name: Install Theos + ldid (x86_64 host)
+      - name: Install Theos + ldid (arm64 host)
         run: |
           export THEOS=$RUNNER_TEMP/theos
           echo "THEOS=$THEOS" >> $GITHUB_ENV
           git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS"
           mkdir -p "$THEOS/bin"
-          curl -sL https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_macosx_x86_64 -o "$THEOS/bin/ldid"
+          curl -sL https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_macosx_arm64 -o "$THEOS/bin/ldid"
           chmod +x "$THEOS/bin/ldid"
           "$THEOS/bin/ldid" -v || true
 
