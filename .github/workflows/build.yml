@@ -1,0 +1,33 @@
+name: build-xit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Theos + ldid
+        run: |
+          export THEOS=$RUNNER_TEMP/theos
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
+          git clone --recursive https://github.com/theos/theos.git "$THEOS"
+          curl -sL https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_macosx_arm64 -o "$THEOS/bin/ldid"
+          chmod +x "$THEOS/bin/ldid"
+          "$THEOS/bin/ldid" -v || true
+
+      - name: Build dylib
+        run: |
+          make clean || true
+          make -j4
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xit-dylib
+          path: out/xit.dylib
+          if-no-files-found: error
