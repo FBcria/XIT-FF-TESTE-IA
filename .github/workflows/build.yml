@@ -7,23 +7,41 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-13
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install Theos + ldid
+      - name: Arch check
+        run: uname -m && xcodebuild -version && sw_vers
+
+      - name: Install Theos + ldid (x86_64 host)
         run: |
           export THEOS=$RUNNER_TEMP/theos
           echo "THEOS=$THEOS" >> $GITHUB_ENV
-          git clone --recursive https://github.com/theos/theos.git "$THEOS"
-          curl -sL https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_macosx_arm64 -o "$THEOS/bin/ldid"
+          git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS"
+          mkdir -p "$THEOS/bin"
+          curl -sL https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_macosx_x86_64 -o "$THEOS/bin/ldid"
           chmod +x "$THEOS/bin/ldid"
           "$THEOS/bin/ldid" -v || true
+
+      - name: Force arm64 cross toolchain
+        run: |
+          echo "ARCHS=arm64" >> $GITHUB_ENV
+          echo "TARGET=iphone:clang:latest:14.0" >> $GITHUB_ENV
+          xcrun --sdk iphoneos --show-sdk-path
 
       - name: Build dylib
         run: |
           make clean || true
-          make -j4
+          make -j4 ARCHS=arm64 TARGET=iphone:clang:latest:14.0
+
+      - name: Verify output
+        run: |
+          file out/xit.dylib
+          lipo -info out/xit.dylib
+          codesign -d --entitlements :- out/xit.dylib 2>/dev/null || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
